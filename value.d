@@ -1,4 +1,5 @@
-value.o: value.c memory.h common.h value.h
-memory.h:
+value.o: value.c object.h common.h value.h memory.h
+object.h:
 common.h:
 value.h:
+memory.h:

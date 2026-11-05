@@ -1,32 +1,25 @@
-# Makefile for clox. Builds main.c and every other .c file in this folder.
-CC = gcc
-CFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c99 -g -MMD -MP
+CC      = gcc
+CFLAGS  = -std=c99 -Wall -Wextra -g -MMD -MP
+SRC     = $(wildcard *.c)
+OBJ     = $(SRC:.c=.o)
+DEP     = $(OBJ:.o=.d)
 
-SRCS = $(wildcard *.c)
-OBJS = $(SRCS:.c=.o)
-DEPS = $(SRCS:.c=.d)
-TARGET = clox
-
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+clox: $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Build and run the REPL.
-run: $(TARGET)
-	./$(TARGET)
+# Build with AddressSanitizer to catch memory bugs
+asan: CFLAGS += -fsanitize=address,undefined
+asan: clean clox
 
-# Build and run test.lox.
-test: $(TARGET)
-	./$(TARGET) test.lox
+run: clox
+	./clox
 
 clean:
-	rm -f $(OBJS) $(DEPS) $(TARGET)
+	rm -f clox $(OBJ) $(DEP)
 
-# Header dependency files, so editing a .h rebuilds what needs it.
--include $(DEPS)
+.PHONY: run clean asan
 
-.PHONY: all run test clean
+-include $(DEP)
