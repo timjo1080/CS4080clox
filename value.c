@@ -49,3 +49,24 @@ bool valuesEqual(Value a, Value b) {
     default:         return false; // Unreachable.
   }
 }
+
+static uint32_t hashDouble(double value) {
+  uint64_t bits;
+  memcpy(&bits, &value, sizeof(double));
+  return (uint32_t)(bits ^ (bits >> 32));
+}
+
+uint32_t hashValue(Value value) {
+  switch (value.type) {
+    case VAL_BOOL:
+      return AS_BOOL(value) ? 1 : 0;
+    case VAL_NIL:
+      return 0;
+    case VAL_NUMBER:
+      return hashDouble(AS_NUMBER(value));
+    case VAL_OBJ:
+      return AS_STRING(value)->hash;
+    default:
+      return 0; // Unreachable.
+  }
+}

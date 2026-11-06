@@ -59,6 +59,8 @@ static void runFile(const char* path) {
 
 int main(int argc, const char* argv[]) {
       initVM();
+          Table t; initTable(&t); Value o; tableSet(&t, NUMBER_VAL(1), NUMBER_VAL(10)); tableSet(&t, BOOL_VAL(true), NUMBER_VAL(20)); tableSet(&t, NIL_VAL, NUMBER_VAL(30)); printf("%d%d%d%d\n", tableGet(&t, NUMBER_VAL(1), &o), tableGet(&t, BOOL_VAL(true), &o), tableGet(&t, NIL_VAL, &o), !tableGet(&t, NUMBER_VAL(2), &o)); freeTable(&t);
+
 
     if (argc == 1) {
       repl();
@@ -70,5 +72,6 @@ int main(int argc, const char* argv[]) {
     }
 
     freeVM();
+
     return 0;
 }
