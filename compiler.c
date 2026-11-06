@@ -10,6 +10,8 @@
 #include "debug.h"
 #endif
 
+Table stringConstants;
+
 typedef struct {
     Token current;
     Token previous;
@@ -286,8 +288,16 @@ static void defineVariable(uint8_t global) {
 }
 
 static uint8_t identifierConstant(Token* name) {
-  return makeConstant(OBJ_VAL(copyString(name->start,
-                                         name->length)));
+  ObjString* string = copyString(name->start, name->length);
+
+  Value value;
+  if (tableGet(&stringConstants, string, &value)) {
+    return (uint8_t)AS_NUMBER(value);
+  }
+
+  uint8_t constant = makeConstant(OBJ_VAL(string));
+  tableSet(&stringConstants, string, NUMBER_VAL(constant));
+  return constant;
 }
 
 static uint8_t parseVariable(const char* errorMessage) {
@@ -377,12 +387,14 @@ bool compile(const char* source, Chunk* chunk) {
 
     parser.hadError = false;
     parser.panicMode = false;
+    initTable(&stringConstants);
 
     advance();
     while (!match(TOKEN_EOF)) {
       declaration();
     }
     endCompiler();
+    freeTable(&stringConstants);
     return !parser.hadError;
 }
 

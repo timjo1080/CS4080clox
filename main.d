@@ -1,6 +1,7 @@
-main.o: main.c common.h chunk.h value.h debug.h vm.h
+main.o: main.c common.h chunk.h value.h debug.h vm.h table.h
 common.h:
 chunk.h:
 value.h:
 debug.h:
 vm.h:
+table.h:
