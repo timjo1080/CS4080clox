@@ -43,6 +43,7 @@ typedef struct {
 typedef struct {
   Token name;
   int depth;
+  bool isFinal;
 } Local;
 
 typedef struct {
@@ -54,6 +55,8 @@ typedef struct {
 Parser parser;
 Compiler* current = NULL; 
 Chunk* compilingChunk;
+static int resolveLocal(Compiler* compiler, Token* name);
+static void markInitialized();
 
 static Chunk* currentChunk() {
   return compilingChunk;
@@ -225,9 +228,11 @@ static uint8_t identifierConstant(Token* name);
 static void namedVariable(Token name, bool canAssign) {
   uint8_t getOp, setOp;
   int arg = resolveLocal(current, &name);
+  bool isFinal = false;
   if (arg != -1) {
     getOp = OP_GET_LOCAL;
     setOp = OP_SET_LOCAL;
+    isFinal = current->locals[arg].isFinal;
   } else {
     arg = identifierConstant(&name);
     getOp = OP_GET_GLOBAL;
@@ -235,6 +240,9 @@ static void namedVariable(Token name, bool canAssign) {
   }
 
   if (canAssign && match(TOKEN_EQUAL)) {
+    if (isFinal) {
+      error("Can't assign to a 'let' variable.");
+    }
     expression();
     emitBytes(setOp, (uint8_t)arg);
   } else {
@@ -301,6 +309,7 @@ ParseRule rules[] = {
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_LET]           = {NULL,     NULL,   PREC_NONE},
 };
 
 static void parsePrecedence(Precedence precedence) {
@@ -364,7 +373,8 @@ static void addLocal(Token name) {
 
   Local* local = &current->locals[current->localCount++];
   local->name = name;
-  local->depth = -1;  
+  local->depth = -1; 
+  local->isFinal = false;
 }
 
 static void declareVariable() {
@@ -428,6 +438,21 @@ static void varDeclaration() {
   defineVariable(global);
 }
 
+static void letDeclaration() {
+  uint8_t global = parseVariable("Expect variable name.");
+
+  if (current->scopeDepth > 0) {
+    current->locals[current->localCount - 1].isFinal = true;
+  }
+
+  consume(TOKEN_EQUAL, "A 'let' variable must have an initializer.");
+  expression();
+  consume(TOKEN_SEMICOLON,
+          "Expect ';' after variable declaration.");
+
+  defineVariable(global);
+}
+
 static void expressionStatement() {
   expression();
   consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
@@ -467,6 +492,8 @@ static void synchronize() {
 static void declaration() {
   if (match(TOKEN_VAR)) {
     varDeclaration();
+  } else if (match(TOKEN_LET)) {
+    letDeclaration();
   } else {
     statement();
   }

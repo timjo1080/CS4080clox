@@ -122,7 +122,7 @@ static TokenType identifierType() {
         }
       }
       break;
-    case 'l': return checkKeyword(1, 1, "et", TOKEN_LET);
+    case 'l': return checkKeyword(1, 2, "et", TOKEN_LET);
     case 'i': return checkKeyword(1, 1, "f", TOKEN_IF);
     case 'n': return checkKeyword(1, 2, "il", TOKEN_NIL);
     case 'o': return checkKeyword(1, 1, "r", TOKEN_OR);
