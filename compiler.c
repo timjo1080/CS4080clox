@@ -261,6 +261,10 @@ static void string(bool canAssign) {
 }
 
 static uint8_t identifierConstant(Token* name);
+static int resolveLocal(Compiler* compiler, Token* name);
+static void markInitialized();
+static void and_(bool canAssign);
+static void caseBody();
 
 static void namedVariable(Token name, bool canAssign) {
   uint8_t getOp, setOp;
@@ -341,6 +345,10 @@ ParseRule rules[] = {
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_COLON]   = {NULL, NULL, PREC_NONE},
+  [TOKEN_SWITCH]  = {NULL, NULL, PREC_NONE},
+  [TOKEN_CASE]    = {NULL, NULL, PREC_NONE},
+  [TOKEN_DEFAULT] = {NULL, NULL, PREC_NONE},
 };
 
 static void parsePrecedence(Precedence precedence) {
@@ -596,6 +604,69 @@ static void declaration() {
   if (parser.panicMode) synchronize();
 }
 
+static void caseBody() {
+  while (!check(TOKEN_CASE) && !check(TOKEN_DEFAULT) &&
+         !check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    declaration();
+  }
+}
+
+static void switchStatement() {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after switch value.");
+  consume(TOKEN_LEFT_BRACE, "Expect '{' before switch cases.");
+
+  int endJumps[UINT8_COUNT];
+  int endCount = 0;
+  bool hasDefault = false;
+
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    if (match(TOKEN_CASE)) {
+      if (hasDefault) error("Can't have a case after the default case.");
+
+      emitByte(OP_DUP);
+      expression();
+      consume(TOKEN_COLON, "Expect ':' after case value.");
+      emitByte(OP_EQUAL);
+      int next = emitJump(OP_JUMP_IF_FALSE);
+      emitByte(OP_POP);   // comparison result
+      emitByte(OP_POP);   // switch value
+
+      beginScope();
+      caseBody();
+      endScope();
+
+      if (endCount >= UINT8_COUNT) {
+        error("Too many cases in switch statement.");
+      } else {
+        endJumps[endCount++] = emitJump(OP_JUMP);
+      }
+      patchJump(next);
+      emitByte(OP_POP);   // comparison result (no-match path)
+    } else if (match(TOKEN_DEFAULT)) {
+      if (hasDefault) error("Already have a default case.");
+      hasDefault = true;
+      consume(TOKEN_COLON, "Expect ':' after 'default'.");
+      emitByte(OP_POP);   // switch value
+
+      beginScope();
+      caseBody();
+      endScope();
+    } else {
+      error("Expect 'case' or 'default' inside switch.");
+      advance();
+    }
+  }
+
+  if (!hasDefault) emitByte(OP_POP);   // switch value, nothing matched
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after switch cases.");
+
+  for (int i = 0; i < endCount; i++) {
+    patchJump(endJumps[i]);
+  }
+}       
+
 static void statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
@@ -609,7 +680,9 @@ static void statement() {
     beginScope();
     block();
     endScope();
-   }
+   } else if (match(TOKEN_SWITCH)) {
+  switchStatement();
+}
   else {
   expressionStatement();
   }

@@ -1,1 +1,14 @@
-(1 + 2) * 3
+var x = 2;
+switch (x) {
+  case 1: print "one";
+  case 2: print "two"; print "still two";
+  default: print "other";
+}
+switch (9) {
+  case 1: print "one";
+  default: print "other";
+}
+switch (3) {
+  case 3: var y = 5; print y;
+}
+print "done";
