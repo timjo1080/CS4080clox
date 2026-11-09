@@ -11,6 +11,9 @@
 #include "debug.h"
 #endif
 
+static int innermostLoopStart = -1;
+static int innermostLoopScopeDepth = 0;
+
 typedef struct {
     Token current;
     Token previous;
@@ -262,6 +265,11 @@ static void string(bool canAssign) {
 
 static uint8_t identifierConstant(Token* name);
 
+static int resolveLocal(Compiler* compiler, Token* name);
+static void markInitialized();
+static void and_(bool canAssign);
+static void caseBody();
+
 static void namedVariable(Token name, bool canAssign) {
   uint8_t getOp, setOp;
   int arg = resolveLocal(current, &name);
@@ -341,6 +349,7 @@ ParseRule rules[] = {
   [TOKEN_WHILE]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]         = {NULL,     NULL,   PREC_NONE},
   [TOKEN_EOF]           = {NULL,     NULL,   PREC_NONE},
+  [TOKEN_CONTINUE] = {NULL, NULL, PREC_NONE},
 };
 
 static void parsePrecedence(Precedence precedence) {
@@ -484,6 +493,8 @@ static void expressionStatement() {
 }
 
 static void forStatement() {
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
   beginScope();
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
   if (match(TOKEN_SEMICOLON)) {
@@ -516,6 +527,9 @@ static void forStatement() {
     patchJump(bodyJump);
   }
 
+  innermostLoopStart = loopStart;
+  innermostLoopScopeDepth = current->scopeDepth;
+
   statement();
   emitLoop(loopStart);
 
@@ -523,6 +537,9 @@ static void forStatement() {
     patchJump(exitJump);
     emitByte(OP_POP); // Condition.
   }
+
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
   endScope();
 }
 
@@ -548,7 +565,13 @@ static void printStatement() {
 }
 
 static void whileStatement() {
+  int surroundingLoopStart = innermostLoopStart;
+  int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+
   int loopStart = currentChunk()->count;
+  innermostLoopStart = loopStart;
+  innermostLoopScopeDepth = current->scopeDepth;
+
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
@@ -560,6 +583,9 @@ static void whileStatement() {
 
   patchJump(exitJump);
   emitByte(OP_POP);
+
+  innermostLoopStart = surroundingLoopStart;
+  innermostLoopScopeDepth = surroundingLoopScopeDepth;
 }
 
 static void synchronize() {
@@ -596,10 +622,29 @@ static void declaration() {
   if (parser.panicMode) synchronize();
 }
 
+static void continueStatement()
+{
+  if (innermostLoopStart == -1) {
+    error("Cannot use 'continue' outside of a loop.");
+    return;
+  }
+
+  consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+
+  for (int i = current->localCount - 1; i >= 0 && current->locals[i].depth > innermostLoopScopeDepth; i--)
+  {
+    emitByte(OP_POP);
+  }
+  emitLoop(innermostLoopStart);
+}
+
 static void statement() {
   if (match(TOKEN_PRINT)) {
     printStatement();
-  } else if (match(TOKEN_FOR)) {
+  } else if (match(TOKEN_CONTINUE)) {
+  continueStatement();
+} 
+  else if (match(TOKEN_FOR)) {
     forStatement();
    } else if (match(TOKEN_IF)) {
     ifStatement();

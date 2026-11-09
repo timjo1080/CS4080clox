@@ -1,1 +1,6 @@
-(1 + 2) * 3
+for (var i = 0; i < 6; i = i + 1) {
+  var skip = i == 1 or i == 3 or i == 5;
+  if (skip) continue;
+  var msg = "even";
+  print i;
+}
