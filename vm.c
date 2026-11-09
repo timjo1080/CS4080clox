@@ -78,6 +78,7 @@ static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_SHORT() (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
 #define BINARY_OP(valueType, op) \
     do { \
       if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -115,13 +116,13 @@ static InterpretResult run() {
         case OP_FALSE: push(BOOL_VAL(false)); break;
         case OP_POP: pop(); break;
         case OP_SET_LOCAL: {
-          uint8_t slot = READ_BYTE();
-          vm.stack[slot] = peek(0);
+          uint16_t slot = READ_SHORT();
+          push(vm.stack[slot]);
           break;
         }
         case OP_GET_LOCAL: {
-          uint8_t slot = READ_BYTE();
-          push(vm.stack[slot]); 
+          uint16_t slot = READ_SHORT();
+          vm.stack[slot] = peek(0);
           break;
         }
         case OP_GET_GLOBAL: {
