@@ -39,7 +39,7 @@ static void runtimeError(const char* format, ...) {
 
   for (int i = vm.frameCount - 1; i >= 0; i--) {
     CallFrame* frame = &vm.frames[i];
-    ObjFunction* function = getFrameFunction(frame);
+    ObjFunction* function = frameFunction(frame);
     size_t instruction = frame->ip - function->chunk.code - 1;
     fprintf(stderr, "[line %d] in ", 
             function->chunk.lines[instruction]);
@@ -277,12 +277,14 @@ static InterpretResult run() {
         }
         case OP_GET_UPVALUE: {
           uint8_t slot = READ_BYTE();
-          push(*frame->closure->upvalues[slot]->location);
+          ObjClosure* closure = (ObjClosure*)frame->function;
+          push(*closure->upvalues[slot]->location);
           break;
         }
         case OP_SET_UPVALUE: {
           uint8_t slot = READ_BYTE();
-          *frame->closure->upvalues[slot]->location = peek(0);
+          ObjClosure* closure = (ObjClosure*)frame->function;
+          *closure->upvalues[slot]->location = peek(0);
           break;
         }
         case OP_EQUAL: {
@@ -356,10 +358,10 @@ static InterpretResult run() {
             uint8_t isLocal = READ_BYTE();
             uint8_t index = READ_BYTE();
             if (isLocal) {
-              closure->upvalues[i] =
-                  captureUpvalue(frame->slots + index);
+              closure->upvalues[i] = captureUpvalue(frame->slots + index);
             } else {
-              closure->upvalues[i] = frame->closure->upvalues[index];
+              closure->upvalues[i] =
+                  ((ObjClosure*)frame->function)->upvalues[index];
             }
           }
           break;
@@ -401,6 +403,6 @@ InterpretResult interpret(const char* source) {
     ObjClosure* closure = newClosure(function);
     pop();
     push(OBJ_VAL(closure));
-    call(closure, 0);
+    call((Obj*)closure, function, 0);
     return run();
 }

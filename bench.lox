@@ -1,0 +1,16 @@
+fun run() {
+  var sum = 0;
+  for (var j = 0; j < 100000; j = j + 1) {
+    fun outer(a) {
+      fun inner() { return a; }
+      return inner;
+    }
+    var closure = outer(j);
+    sum = sum + closure();
+  }
+  return sum;
+}
+
+var start = clock();
+print run();
+print clock() - start;

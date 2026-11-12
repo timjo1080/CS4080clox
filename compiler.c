@@ -11,6 +11,7 @@
 #include "debug.h"
 #endif
 
+
 typedef struct {
     Token current;
     Token previous;
@@ -67,8 +68,16 @@ typedef struct Compiler {
   int scopeDepth;
 } Compiler;
 
+
+
 Parser parser;
 Compiler* current = NULL; 
+
+static uint8_t argumentList();
+static int resolveLocal(Compiler* compiler, Token* name);
+static int resolveUpvalue(Compiler* compiler, Token* name);
+static void markInitialized();
+static void and_(bool canAssign);
 
 static Chunk* currentChunk() {
   return &current->function->chunk;
@@ -595,7 +604,7 @@ static void function(FunctionType type) {
       emitByte(compiler.upvalues[i].index);
     }
   } else {
-    emitBytes(OP_CLOSURE, functionConstant);
+    emitBytes(OP_CONSTANT, functionConstant);
   }
 }
 

@@ -1,1 +1,24 @@
-(1 + 2) * 3
+fun hello() { print "hi"; }
+hello();                  // hi
+
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+print fib(10);            // 55
+
+fun outer() {
+  var x = "outside";
+  fun inner() { print x; }
+  return inner;
+}
+outer()();                // outside
+
+fun counter() {
+  var i = 0;
+  fun inc() { i = i + 1; return i; }
+  return inc;
+}
+var c = counter();
+print c();                // 1
+print c();                // 2
