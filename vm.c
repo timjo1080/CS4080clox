@@ -12,8 +12,32 @@
 
 VM vm; 
 
-static Value clockNative(int argCount, Value* args) {
-  return NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+static bool clockNative(int argCount, Value* args) {
+  args[-1] = NUMBER_VAL((double)clock() / CLOCKS_PER_SEC);
+  return true;
+}
+
+static bool sqrtNative(int argCount, Value* args) {
+  if (argCount != 1 || !IS_NUMBER(args[0])) {
+    args[-1] = OBJ_VAL(copyString("sqrt() needs 1 number.", 22));
+    return false;
+  }
+  args[-1] = NUMBER_VAL(sqrt(AS_NUMBER(args[0])));
+  return true;
+}
+
+static bool floorNative(int argCount, Value* args) {
+  if (argCount != 1 || !IS_NUMBER(args[0])) {
+    args[-1] = OBJ_VAL(copyString("floor() needs 1 number.", 23));
+    return false;
+  }
+  args[-1] = NUMBER_VAL(floor(AS_NUMBER(args[0])));
+  return true;
+}
+
+static bool errNative(int argCount, Value* args) {
+  args[-1] = OBJ_VAL(copyString("Error!", 6));
+  return false;
 }
 
 static void resetStack() {
@@ -59,6 +83,9 @@ void initVM() {
     initTable(&vm.strings);
 
     defineNative("clock", clockNative);
+    defineNative("err", errNative);
+    defineNative("sqrt", sqrtNative);
+    defineNative("floor", floorNative);
 }
 
 void freeVM() {
@@ -106,10 +133,13 @@ static bool callValue(Value callee, int argCount) {
         return call(AS_FUNCTION(callee), argCount);
       case OBJ_NATIVE: {
         NativeFn native = AS_NATIVE(callee);
-        Value result = native(argCount, vm.stackTop - argCount);
-        vm.stackTop -= argCount + 1;
-        push(result);
-        return true;
+        if (native(argCount, vm.stackTop - argCount)) {
+          vm.stackTop -= argCount;
+          return true;
+        } else {
+          runtimeError(AS_STRING(vm.stackTop[-argCount - 1])->chars);
+          return false;
+        }
       }
       default:
         break; // Non-callable object type.
