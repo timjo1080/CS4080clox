@@ -1,1 +1,2 @@
-(1 + 2) * 3
+print clock();    // works, prints a number
+print clock(1);   // error
