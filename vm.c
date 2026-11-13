@@ -102,11 +102,9 @@ if (argCount != closure->function->arity) {
 
 static bool callValue(Value callee, int argCount) {
   if (IS_OBJ(callee)) {
-    case OBJ_CLOSURE:
-        return call(AS_CLOSURE(callee), argCount);
     switch (OBJ_TYPE(callee)) {
-      case OBJ_FUNCTION: 
-        return call(AS_FUNCTION(callee), argCount);
+      case OBJ_CLOSURE:
+        return call(AS_CLOSURE(callee), argCount);
       case OBJ_NATIVE: {
         NativeFn native = AS_NATIVE(callee);
         Value result = native(argCount, vm.stackTop - argCount);

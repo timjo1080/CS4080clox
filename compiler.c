@@ -11,6 +11,11 @@
 #include "debug.h"
 #endif
 
+static uint8_t argumentList();
+static void markInitialized();
+static void and_(bool canAssign);
+
+
 typedef struct {
     Token current;
     Token previous;
@@ -67,8 +72,12 @@ typedef struct Compiler {
   int scopeDepth;
 } Compiler;
 
+
+
 Parser parser;
 Compiler* current = NULL; 
+static int resolveLocal(Compiler* compiler, Token* name);
+static int resolveUpvalue(Compiler* compiler, Token* name); 
 
 static Chunk* currentChunk() {
   return &current->function->chunk;
