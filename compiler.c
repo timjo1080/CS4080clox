@@ -62,6 +62,11 @@ typedef struct Compiler {
 
 Parser parser;
 Compiler* current = NULL; 
+static uint8_t argumentList();
+static int resolveLocal(Compiler* compiler, Token* name);
+static void and_(bool canAssign);
+static void markInitialized();
+
 
 static Chunk* currentChunk() {
   return &current->function->chunk;
