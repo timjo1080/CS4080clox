@@ -7,9 +7,9 @@
 #include "compiler.h"
 #include "scanner.h"
 
-#ifdef DEBUG_PRINT_CODE
-#include "debug.h"
-#endif
+// #ifdef DEBUG_PRINT_CODE
+// #include "debug.h"
+// #endif
 
 static uint8_t argumentList();
 static void markInitialized();
@@ -642,7 +642,7 @@ static void forStatement() {
   if (match(TOKEN_SEMICOLON)) {
     // No initializer.
   } else if (match(TOKEN_VAR)) {
-    loopVairable = parser.current;
+    loopVariableName = parser.current;
     varDeclaration();
     loopVariable = current->localCount - 1;
   } else {
