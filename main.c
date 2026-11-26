@@ -58,7 +58,10 @@ static void runFile(const char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-      initVM();
+  
+  initVM();
+
+      
 
     if (argc == 1) {
       repl();
