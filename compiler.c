@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "compiler.h"
+#include "memory.h"
 #include "scanner.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -75,7 +76,14 @@ typedef struct Compiler {
 
 
 Parser parser;
-Compiler* current = NULL; 
+Compiler* current = NULL;
+
+void markCompilerRoots(void) {
+  for (Compiler* compiler = current; compiler != NULL;
+       compiler = compiler->enclosing) {
+    markObject((Obj*)compiler->function);
+  }
+}
 static int resolveLocal(Compiler* compiler, Token* name);
 static int resolveUpvalue(Compiler* compiler, Token* name); 
 
@@ -821,4 +829,3 @@ ObjFunction* compile(const char* source) {
     ObjFunction* function = endCompiler();
      return parser.hadError ? NULL : function;
 }
-
