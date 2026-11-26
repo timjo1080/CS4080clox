@@ -642,7 +642,7 @@ static void forStatement() {
   if (match(TOKEN_SEMICOLON)) {
     // No initializer.
   } else if (match(TOKEN_VAR)) {
-    loopVairable = parser.current;
+    loopVariableName = parser.current;
     varDeclaration();
     loopVariable = current->localCount - 1;
   } else {
